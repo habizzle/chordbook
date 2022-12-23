@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Songs</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 48pt;
+        }
+
+        h2 {
+            text-align: center;
+            margin: 0;
+        }
+
+        #edition {
+            text-align: center;
+            font-style: italic;
+        }
+
+        #edition > * {
+            margin: 0 1em;
+        }
+
+        #edition > .active {
+            font-weight: bold;
+        }
+
+        .author {
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 1.5em;
+            font-style: italic;
+        }
+
+        .author:empty {
+            display: none;
+        }
+
+        pre {
+            margin: 0;
+            font-size: 11px;
+        }
+
+        pre.text + pre.chord {
+            margin-top: 0.5em;
+        }
+
+        pre.chord + pre.text {
+            margin-top: 0.2em;
+        }
+
+        .block {
+            margin-top: 1em;
+            display: flex;
+        }
+
+        .block .title {
+            font-size: 0.8em;
+            width: 5em;
+        }
+
+        .content > pre:first-child {
+            margin-top: 0;
+        }
+
+        body {
+            background: darkslateblue;
+            margin: 0;
+        }
+
+        @media screen, pagedjs-ignore {
+            .pagedjs_page {
+                margin: 1em
+            }
+
+            nav {
+                /* Override print styles which are applied by paged-js also for screen */
+                display: block !important;
+
+                background-color: darkblue;
+                top: 1em;
+                right: 1em;
+                bottom: 1em;
+                border-radius: 0.5em;
+                font-size: 0.6em;
+                max-width: 20%;
+                color: white;
+                padding: 1em;
+                overflow-y: auto;
+            }
+
+            nav p {
+                margin: 1em 0 0.5em;
+                border-bottom: 1px solid white;
+                text-transform: capitalize;
+            }
+
+            nav p:first-child {
+                margin-top: 0;
+            }
+
+            nav ul, nav li {
+                padding: 0;
+                margin: 0;
+                list-style: none;
+            }
+
+            nav a {
+                color: white;
+            }
+        }
+
+        @media print {
+            @page {
+                size: A4;
+                margin: 1.5cm;
+                padding-bottom: 0.5cm;
+                background-color: white;
+
+                @bottom-center {
+                    content: counter(page);
+                }
+            }
+
+            @page :first {
+                @bottom-center {
+                    content: '';
+                }
+            }
+
+            nav {
+                display: none;
+            }
+
+            section {
+                break-after: page;
+            }
+
+            .block {
+                break-inside: avoid;
+            }
+        }
+    </style>
+    <script>
+        window.PagedConfig = {
+            auto: false,
+        };
+    </script>
+    <script src="https://unpkg.com/pagedjs/dist/paged.polyfill.js"></script>
+    <script>
+        document.addEventListener('keydown', (e) => {
+            function isElementInViewport(el) {
+                const rect = el.getBoundingClientRect();
+                const elementHeight = el.offsetHeight;
+                const elementWidth = el.offsetWidth;
+                return rect.top >= -elementHeight
+                    && rect.left >= -elementWidth
+                    && rect.right <= (window.innerWidth || document.documentElement.clientWidth) + elementWidth
+                    && rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) + elementWidth;
+            }
+
+            const selector = '.song';
+
+            if (e.key === 'ArrowLeft') {
+                const all = [...document.querySelectorAll(selector)];
+                const current = all.find((el) => isElementInViewport(el));
+                const previousIndex = all.indexOf(current) - 1;
+                if (previousIndex >= 0) {
+                    all[previousIndex].scrollIntoView();
+                }
+            }
+
+            if (e.key === 'ArrowRight') {
+                const all = [...document.querySelectorAll(selector)];
+                const current = all.find((el) => isElementInViewport(el));
+                const nextIndex = all.indexOf(current) + 1;
+                if (nextIndex < all.length) {
+                    all[nextIndex].scrollIntoView();
+                }
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateContent();
+        });
+
+        const updateContent = () => {
+            const transposedKey = new URLSearchParams(window.location.search).get('edition') || null;
+
+            const loadSongs = () => {
+                const url = new URL("./songs", window.location.origin);
+                if (transposedKey) {
+                    url.searchParams.append("edition", transposedKey)
+                }
+                fetch(url, {method: "GET"})
+                    .then((res) => res.json())
+                    .then(updateSongs)
+                    .catch((e) => console.error(e));
+            }
+
+            const updateSongs = async (books) => {
+                const songsElement = document.getElementById("songs");
+                songsElement.innerHTML = books.map(formatBook).join('');
+
+                await window.PagedPolyfill.preview();
+
+                // append after applying paged-js to make sure it is sticky
+                appendNavigation(books);
+            }
+
+            const formatBook = (book, bookIndex) => book.songs
+                .map((song, songIndex) => formatSong(bookIndex, song, songIndex))
+                .join('');
+
+            const formatSong = (bookIndex, song, songIndex) => `
+                <section class="song" id="song-${bookIndex}-${songIndex}">
+                    <h2 class="song-title">${song.title}</h2>
+                    <p class="author">${song.author ?? ''}</p>
+                    ${song.blocks.map(block => formatBlock(block)).join('')}
+                </section>
+            `;
+
+            const formatBlock = (block) => `
+                <div class="block">
+                    <div class="title">
+                        ${block.name}:
+                    </div>
+                    <div class="content">
+                        ${block.lines.map(line => formatLine(line)).join('')}
+                    </div>
+                </div>
+            `;
+
+            const formatLine = (line) => `<pre class="${line.type}">${line.content}</pre>`;
+
+            const updateEdition = () => {
+                document.getElementById("edition").innerHTML = formatEditions(transposedKey);
+            }
+
+            const formatEditions = (transposedKey) => [
+                formatEdition("Original", null, transposedKey),
+                formatEdition("Easy Ukulele Edition (C)", "C", transposedKey),
+                formatEdition("Easy Guitar Edition (G)", "G", transposedKey),
+            ].join('');
+
+            const formatEdition = (editionName, editionKey, transposedKey) => {
+                const href = !editionKey ? "/" : `?edition=${editionKey}`
+                return editionKey === transposedKey
+                    ? `<span class="active">${editionName}</span>`
+                    : `<a title="Show ${editionName}" href="${href}">${editionName}</a>`;
+            };
+
+            const appendNavigation = function (books) {
+                document.getElementById("toc")?.remove();
+
+                const nav = document.createElement("nav");
+                nav.id = "toc";
+                // is for some reasons removed by paged-js if in css-ignore-section
+                nav.style.position = "fixed";
+                nav.innerHTML = books.map((book, bookIndex) => `
+                    <p>${book.title}</p>
+                    <ul>
+                        ${book.songs.map((song, songIndex) => `<li><a href="#song-${bookIndex}-${songIndex}">${song.title}</a></li>`).join("")}
+                    </ul>
+                `).join("");
+
+                document.getElementsByTagName("body")[0].prepend(nav);
+            }
+
+            loadSongs();
+            updateEdition();
+        };
+    </script>
+</head>
+<body>
+<section class="cover">
+    <h1>Awesome<br/>Guitar<br/>Songs</h1>
+    <p id="edition"></p>
+</section>
+<div id="songs"></div>
+</body>
+</html>
