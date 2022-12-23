@@ -40,7 +40,6 @@ const transpositions = [
     ["E7", "B7"],
     ["Em", "Bm"],
     ["Em7", "Bm7"],
-
 ]
 
 const intelliLine = (line) => {
