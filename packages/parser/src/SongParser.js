@@ -21,8 +21,7 @@ const bookify = (filePath, key) => ({
     songs: parseYamlSongDocs(filePath).map((songDoc) => songify(songDoc, key))
 });
 
-const formatTitle = (filePath) => filePath
-    .replace(/^books\//, '')
+const formatTitle = (filePath) => path.basename(filePath)
     .replace(/(.private)?.yml$/, '')
     .replace('-', ' ');
 
