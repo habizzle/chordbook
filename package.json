@@ -1,15 +1,18 @@
 {
-  "name": "songs",
+  "name": "chordbook",
   "version": "1.0.0",
-  "main": "src/index.js",
-  "type": "module",
-  "scripts": {
-    "start": "node src/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "author": "Hannes Becker",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/habizzle/chordbook/issues"
   },
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "yaml": "^2.1.3"
-  }
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/habizzle/chordbook.git"
+  },
+  "homepage": "https://github.com/habizzle/chordbook#readme",
+  "workspaces": [
+    "parser",
+    "web"
+  ]
 }

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import http from 'http';
 import url from 'url';
-import {parse} from './SongParser.js';
+import {parse} from '@chordbook/parser';
 
 const home = (req, res) => {
     const html = fs.readFileSync("./src/index.html", "utf8");
@@ -17,7 +17,7 @@ const home = (req, res) => {
 const songs = (req, res) => {
     const queryObject = url.parse(req.url, true).query;
     const transposedKey = queryObject['edition'] || null;
-    const songs = parse("./books/", transposedKey);
+    const songs = parse("../books/", transposedKey);
 
     res.writeHead(200, {
         'Content-Type': 'application/json; charset=utf-8',
