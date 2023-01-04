@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "author": "Hannes Becker",
   "license": "MIT",
+  "scripts": {
+    "start": "node packages/web/src/index.js"
+  },
   "bugs": {
     "url": "https://github.com/habizzle/chordbook/issues"
   },
@@ -12,7 +15,6 @@
   },
   "homepage": "https://github.com/habizzle/chordbook#readme",
   "workspaces": [
-    "parser",
-    "web"
+    "packages/*"
   ]
 }

@@ -1,10 +1,17 @@
 import fs from 'fs';
 import http from 'http';
+import path from 'path';
 import url from 'url';
 import {parse} from '@chordbook/parser';
 
+const __filename = url.fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const htmlPath = path.resolve(__dirname, "./index.html");
+const booksPath = process.env.BOOKS_PATH ?? path.resolve(__dirname, "../../../books");
+const port = process.env.PORT ?? 8080;
+
 const home = (req, res) => {
-    const html = fs.readFileSync("./src/index.html", "utf8");
+    const html = fs.readFileSync(htmlPath, "utf8");
 
     res.writeHead(200, {
         'Content-Type': 'text/html; charset=utf-8',
@@ -17,7 +24,7 @@ const home = (req, res) => {
 const songs = (req, res) => {
     const queryObject = url.parse(req.url, true).query;
     const transposedKey = queryObject['edition'] || null;
-    const songs = parse("../books/", transposedKey);
+    const songs = parse(booksPath, transposedKey);
 
     res.writeHead(200, {
         'Content-Type': 'application/json; charset=utf-8',
@@ -30,7 +37,7 @@ const routes = {
     "GET /songs": songs,
 };
 
-export const start = (port) => {
+export const start = () => {
     http.createServer(function (req, res) {
         const path = url.parse(req.url).pathname;
         const callback = routes[`${req.method} ${path}`];
