@@ -17,6 +17,7 @@ const findYamlSongDocs = (directory) => {
 }
 
 const bookify = (filePath, key) => ({
+    id: path.basename(filePath),
     title: formatTitle(filePath),
     songs: parseYamlSongDocs(filePath).map((songDoc) => songify(songDoc, key))
 });
