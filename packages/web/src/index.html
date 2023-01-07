@@ -186,11 +186,9 @@
         });
 
         document.addEventListener('DOMContentLoaded', () => {
-            updateContent();
-        });
-
-        const updateContent = () => {
-            const transposedKey = new URLSearchParams(window.location.search).get('edition') || null;
+            let urlSearchParams = new URLSearchParams(window.location.search);
+            const printMode = urlSearchParams.get("print") !== "false";
+            const transposedKey = urlSearchParams.get("edition") || null;
 
             const loadSongs = () => {
                 const url = new URL("./songs", window.location.origin);
@@ -207,7 +205,9 @@
                 const songsElement = document.getElementById("songs");
                 songsElement.innerHTML = books.map(formatBook).join('');
 
-                await window.PagedPolyfill.preview();
+                if (printMode) {
+                    await window.PagedPolyfill.preview();
+                }
 
                 // append after applying paged-js to make sure it is sticky
                 appendNavigation(books);
@@ -274,7 +274,7 @@
 
             loadSongs();
             updateEdition();
-        };
+        });
     </script>
 </head>
 <body>
