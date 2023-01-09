@@ -13,8 +13,7 @@
         }
 
         h2 {
-            text-align: center;
-            margin: 0;
+            margin: 2em 0 0;
         }
 
         #edition {
@@ -31,7 +30,6 @@
         }
 
         .author {
-            text-align: center;
             margin-top: 0;
             margin-bottom: 1.5em;
             font-style: italic;
@@ -73,6 +71,57 @@
             margin: 0;
         }
 
+        nav {
+            background-color: darkblue;
+            top: 1em;
+            right: 1em;
+            bottom: 1em;
+            border-radius: 0.5em;
+            font-size: 0.8em;
+            max-width: 20%;
+            color: white;
+            padding: 1em;
+            overflow-y: auto;
+        }
+
+        nav header {
+            text-align: right;
+        }
+
+        nav header a {
+            text-decoration: none;
+            background-color: white;
+            border-radius: 50%;
+            display: inline-block;
+            line-height: 1em;
+            color: darkblue;
+            padding: 0.25em
+        }
+
+        nav header a:hover {
+            filter: opacity(0.5);
+        }
+
+        nav p {
+            margin: 1em 0 0.5em;
+            border-bottom: 1px solid white;
+            text-transform: capitalize;
+        }
+
+        nav p:first-child {
+            margin-top: 0;
+        }
+
+        nav ul, nav li {
+            padding: 0;
+            margin: 0;
+            list-style: none;
+        }
+
+        nav a {
+            color: white;
+        }
+
         @media screen {
             body {
                 background: oldlace;
@@ -81,52 +130,12 @@
                 padding: 2em;
                 font-size: 16px;
             }
-
-            h2 {
-                margin-top: 2em;
-                text-align: left;
-            }
         }
 
+        /* Show distinguishable pages on print mode */
         @media screen, pagedjs-ignore {
             .pagedjs_page {
                 margin: 1em
-            }
-
-            nav {
-                /* Override print styles which are applied by paged-js also for screen */
-                display: block !important;
-
-                background-color: darkblue;
-                top: 1em;
-                right: 1em;
-                bottom: 1em;
-                border-radius: 0.5em;
-                font-size: 0.8em;
-                max-width: 20%;
-                color: white;
-                padding: 1em;
-                overflow-y: auto;
-            }
-
-            nav p {
-                margin: 1em 0 0.5em;
-                border-bottom: 1px solid white;
-                text-transform: capitalize;
-            }
-
-            nav p:first-child {
-                margin-top: 0;
-            }
-
-            nav ul, nav li {
-                padding: 0;
-                margin: 0;
-                list-style: none;
-            }
-
-            nav a {
-                color: white;
             }
         }
 
@@ -148,16 +157,21 @@
                 }
             }
 
-            nav {
-                display: none;
-            }
-
             section {
                 break-after: page;
             }
 
             .block {
                 break-inside: avoid;
+            }
+
+            h2 {
+                text-align: center;
+                margin: 0;
+            }
+
+            .author {
+                text-align: center;
             }
         }
     </style>
@@ -201,31 +215,41 @@
         });
 
         document.addEventListener('DOMContentLoaded', () => {
-            let urlSearchParams = new URLSearchParams(window.location.search);
-            const printMode = urlSearchParams.get("print") !== "false";
-            const transposedKey = urlSearchParams.get("edition") || null;
+            const url = new URL(window.location.href);
+            const state = {
+                books: null,
+                printMode: url.searchParams.get("print") === "true",
+                transposedKey: url.searchParams.get("edition") || null,
+                anchor: url.hash.replace("#", '')
+            };
 
             const loadSongs = () => {
                 const url = new URL("./songs", window.location.origin);
-                if (transposedKey) {
-                    url.searchParams.append("edition", transposedKey)
+                if (state.transposedKey) {
+                    url.searchParams.append("edition", state.transposedKey)
                 }
                 fetch(url, {method: "GET"})
                     .then((res) => res.json())
-                    .then(updateSongs)
+                    .then((books) => {
+                        state.books = books;
+                        renderSongs();
+                    })
                     .catch((e) => console.error(e));
             }
 
-            const updateSongs = async (books) => {
+            const renderSongs = async () => {
                 const songsElement = document.getElementById("songs");
-                songsElement.innerHTML = books.map(formatBook).join('');
+                songsElement.innerHTML = state.books.map(formatBook).join('');
 
-                if (printMode) {
+                if (state.printMode) {
                     await window.PagedPolyfill.preview();
+                } else {
+                    appendNavigation();
                 }
 
-                // append after applying paged-js to make sure it is sticky
-                appendNavigation(books);
+                if (state.anchor) {
+                    document.getElementById(state.anchor).scrollIntoView();
+                }
             }
 
             const formatBook = (book, bookIndex) => book.songs
@@ -254,35 +278,50 @@
             const formatLine = (line) => `<pre class="${line.type}">${line.content}</pre>`;
 
             const updateEdition = () => {
-                document.getElementById("edition").innerHTML = formatEditions(transposedKey);
+                document.getElementById("edition").innerHTML = formatEditions();
             }
 
-            const formatEditions = (transposedKey) => [
-                formatEdition("Original", null, transposedKey),
-                formatEdition("Easy Ukulele Edition (C)", "C", transposedKey),
-                formatEdition("Easy Guitar Edition (G)", "G", transposedKey),
+            const formatEditions = () => [
+                formatEdition("Original", null),
+                formatEdition("Easy Ukulele Edition (C)", "C"),
+                formatEdition("Easy Guitar Edition (G)", "G"),
             ].join('');
 
-            const formatEdition = (editionName, editionKey, transposedKey) => {
+            const formatEdition = (editionName, editionKey) => {
+                const current = editionKey === state.transposedKey;
+                if (current) {
+                    return `<span class="active">${editionName}</span>`;
+                }
+
                 const href = !editionKey ? "/" : `?edition=${editionKey}`
-                return editionKey === transposedKey
-                    ? `<span class="active">${editionName}</span>`
+                return state.printMode
+                    ? ''
                     : `<a title="Show ${editionName}" href="${href}">${editionName}</a>`;
             };
 
-            const appendNavigation = function (books) {
+            const appendNavigation = function () {
                 document.getElementById("toc")?.remove();
 
                 const nav = document.createElement("nav");
                 nav.id = "toc";
                 // is for some reasons removed by paged-js if in css-ignore-section
                 nav.style.position = "fixed";
-                nav.innerHTML = books.map((book, bookIndex) => `
+
+                const formattedBooks = state.books.map((book, bookIndex) => `
                     <p>${book.title}</p>
                     <ul>
                         ${book.songs.map((song, songIndex) => `<li><a href="#song-${bookIndex}-${songIndex}">${song.title}</a></li>`).join("")}
                     </ul>
                 `).join("");
+
+                const printPageUrl = new URL(window.location.href);
+                printPageUrl.searchParams.set("print", "true");
+                const relativePrintPageUrl = printPageUrl.toString().replace(printPageUrl.origin, "");
+
+                nav.innerHTML = `
+                    <header><a href="${relativePrintPageUrl}" target="_blank" title="Show print mode">🖶</a></header>
+                    ${formattedBooks}
+                `;
 
                 document.getElementsByTagName("body")[0].prepend(nav);
             }
