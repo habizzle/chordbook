@@ -72,6 +72,7 @@
         }
 
         nav {
+            position: fixed;
             background-color: darkblue;
             top: 1em;
             right: 1em;
@@ -232,25 +233,33 @@
                     .then((res) => res.json())
                     .then((books) => {
                         state.books = books;
-                        renderSongs();
+                        render();
                     })
                     .catch((e) => console.error(e));
             }
 
-            const renderSongs = async () => {
-                const songsElement = document.getElementById("songs");
-                songsElement.innerHTML = state.books.map(formatBook).join('');
+            const render = async () => {
+                const element = document.getElementsByTagName("body")[0];
+
+                element.innerHTML = `
+                    <section class="cover">
+                        <h1>Awesome<br/>Guitar<br/>Songs</h1>
+                        <p id="edition">${formatEditions()}</p>
+                    </section>
+                    ${formatNavigation()}
+                    ${formatBooks()}
+                `;
 
                 if (state.printMode) {
                     await window.PagedPolyfill.preview();
-                } else {
-                    appendNavigation();
                 }
 
                 if (state.anchor) {
                     document.getElementById(state.anchor).scrollIntoView();
                 }
             }
+
+            const formatBooks = () => state.books.map(formatBook).join('');
 
             const formatBook = (book, bookIndex) => book.songs
                 .map((song, songIndex) => formatSong(bookIndex, song, songIndex))
@@ -277,10 +286,6 @@
 
             const formatLine = (line) => `<pre class="${line.type}">${line.content}</pre>`;
 
-            const updateEdition = () => {
-                document.getElementById("edition").innerHTML = formatEditions();
-            }
-
             const formatEditions = () => [
                 formatEdition("Original", null),
                 formatEdition("Easy Ukulele Edition (C)", "C"),
@@ -299,13 +304,10 @@
                     : `<a title="Show ${editionName}" href="${href}">${editionName}</a>`;
             };
 
-            const appendNavigation = function () {
-                document.getElementById("toc")?.remove();
-
-                const nav = document.createElement("nav");
-                nav.id = "toc";
-                // is for some reasons removed by paged-js if in css-ignore-section
-                nav.style.position = "fixed";
+            const formatNavigation = function () {
+                if (state.printMode) {
+                    return '';
+                }
 
                 const formattedBooks = state.books.map((book, bookIndex) => `
                     <p>${book.title}</p>
@@ -318,24 +320,19 @@
                 printPageUrl.searchParams.set("print", "true");
                 const relativePrintPageUrl = printPageUrl.toString().replace(printPageUrl.origin, "");
 
-                nav.innerHTML = `
-                    <header><a href="${relativePrintPageUrl}" target="_blank" title="Show print mode">🖶</a></header>
-                    ${formattedBooks}
+                return `
+                    <nav>
+                        <header><a href="${relativePrintPageUrl}" target="_blank" title="Show print mode">🖶</a></header>
+                        ${formattedBooks}
+                    </nav>
                 `;
-
-                document.getElementsByTagName("body")[0].prepend(nav);
             }
 
             loadSongs();
-            updateEdition();
         });
     </script>
 </head>
 <body>
-<section class="cover">
-    <h1>Awesome<br/>Guitar<br/>Songs</h1>
-    <p id="edition"></p>
-</section>
-<div id="songs"></div>
+<p>Loading...</p>
 </body>
 </html>
