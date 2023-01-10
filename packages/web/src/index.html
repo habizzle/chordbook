@@ -30,15 +30,7 @@
         }
 
         #edition {
-            font-size: 1.5rem;
-            font-style: italic;
-        }
-
-        #edition > * {
-            margin: 0 1em;
-        }
-
-        #edition > .active {
+            font-size: 2rem;
             font-weight: bold;
         }
 
@@ -106,12 +98,16 @@
 
         nav header a {
             background-color: white;
+            color: darkblue;
+            font-family: sans-serif;
             border-radius: 50%;
             display: inline-block;
-            line-height: 1em;
-            color: darkblue;
-            padding: 0.25em;
             border: 0;
+            line-height: 1em;
+            padding: 0.25em;
+            width: 1.5em;
+            height: 1.5em;
+            text-align: center;
         }
 
         nav header a:hover {
@@ -184,14 +180,6 @@
 
             nav {
                 display: none;
-            }
-
-            #edition > * {
-                display: none;
-            }
-
-            #edition > .active {
-                display: unset;
             }
 
             section {
@@ -321,14 +309,7 @@
 
             const formatEdition = (editionName, editionKey) => {
                 const current = editionKey === state.transposedKey;
-                if (current) {
-                    return `<span class="active">${editionName}</span>`;
-                }
-
-                const href = !editionKey ? "/" : `?edition=${editionKey}`
-                return state.printMode
-                    ? ''
-                    : `<a title="Show ${editionName}" href="${href}">${editionName}</a>`;
+                return current ? editionName : '';
             };
 
             const formatNavigation = function () {
@@ -343,13 +324,18 @@
                     </ul>
                 `).join("");
 
-                const printPageUrl = new URL(window.location.href);
-                printPageUrl.searchParams.set("print", "true");
-                const relativePrintPageUrl = printPageUrl.toString().replace(printPageUrl.origin, "");
+                const relativeUrl = (searchParam, value) => {
+                    return searchParam ? `?${searchParam}=${value}` : "/";
+                }
 
                 return `
                     <nav>
-                        <header><a href="${relativePrintPageUrl}" target="_blank" title="Show print mode">🖶</a></header>
+                        <header>
+                            ${state.transposedKey !== null ? `<a href="${relativeUrl()}" title="Show Original">O</a>` : ''}
+                            ${state.transposedKey !== 'G' ? `<a href="${relativeUrl("edition", "G")}" title="Show Easy Guitar Edition (G)">G</a>` : ''}
+                            ${state.transposedKey !== 'C' ? `<a href="${relativeUrl("edition", "C")}" title="Show Easy Ukulele Edition (C)">C</a>` : ''}
+                            <a href="${relativeUrl("print", "true")}" target="_blank" title="Show print mode">🖶</a>
+                        </header>
                         ${formattedBooks}
                     </nav>
                 `;
