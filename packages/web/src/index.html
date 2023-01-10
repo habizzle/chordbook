@@ -83,6 +83,7 @@
         body {
             background: var(--bg-color);
             margin: 0;
+            padding: 2em;
         }
 
         nav {
@@ -140,12 +141,6 @@
             border-bottom: 1px dotted lightblue;
         }
 
-        @media screen {
-            body {
-                padding: 2em;
-            }
-        }
-
         /* Show distinguishable pages on print mode */
         @media screen, pagedjs-ignore {
             .pagedjs_page {
@@ -174,6 +169,10 @@
                 @bottom-center {
                     content: '';
                 }
+            }
+
+            body {
+                padding: 0;
             }
 
             h1, h2, #edition, .author {
