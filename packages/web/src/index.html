@@ -177,12 +177,6 @@
         }
     </style>
     <script>
-        window.PagedConfig = {
-            auto: false,
-        };
-    </script>
-    <script src="https://unpkg.com/pagedjs/dist/paged.polyfill.js"></script>
-    <script>
         document.addEventListener('keydown', (e) => {
             function isElementInViewport(el) {
                 const rect = el.getBoundingClientRect();
@@ -251,7 +245,9 @@
                 `;
 
                 if (state.printMode) {
-                    await window.PagedPolyfill.preview();
+                    const script = document.createElement("script");
+                    script.src = "https://unpkg.com/pagedjs/dist/paged.polyfill.js";
+                    document.head.appendChild(script)
                 }
 
                 if (state.anchor) {
