@@ -339,7 +339,7 @@
                 }
 
                 const formattedBooks = state.books.map((book, bookIndex) => `
-                    <p>${book.title}</p>
+                    ${state.books.length > 1 ? `<p>${book.title}</p>` : ''}
                     <ul>
                         ${book.songs.map((song, songIndex) => `<li><a href="#song-${bookIndex}-${songIndex}">${song.title}</a></li>`).join("")}
                     </ul>
