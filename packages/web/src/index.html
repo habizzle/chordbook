@@ -2,22 +2,35 @@
 <html lang="en">
 <head>
     <title>Songs</title>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <style>
+        :root {
+            --bg-color: oldlace;
+            --text-color: black;
+            --nav-bg-color: darkblue;
+            --base-font-size: 20px;
+        }
+
         * {
             box-sizing: border-box;
         }
 
+        html {
+            font-size: var(--base-font-size);
+        }
+
         h1 {
-            text-align: center;
-            font-size: 48pt;
+            font-size: 4rem;
         }
 
         h2 {
             margin: 2em 0 0;
+            font-size: 1.5rem;
         }
 
         #edition {
-            text-align: center;
+            font-size: 1.5rem;
             font-style: italic;
         }
 
@@ -41,7 +54,7 @@
 
         pre {
             margin: 0;
-            font-size: 11px;
+            font-size: 1rem;
         }
 
         pre.text + pre.chord {
@@ -58,8 +71,9 @@
         }
 
         .block .title {
-            font-size: 0.8em;
-            width: 5em;
+            font-size: 0.8rem;
+            width: 5rem;
+            margin-top: 0.2rem;
         }
 
         .content > pre:first-child {
@@ -67,18 +81,18 @@
         }
 
         body {
-            background: darkslateblue;
+            background: var(--bg-color);
             margin: 0;
         }
 
         nav {
             position: fixed;
-            background-color: darkblue;
+            background-color: var(--nav-bg-color);
             top: 1em;
             right: 1em;
             bottom: 1em;
             border-radius: 0.5em;
-            font-size: 0.8em;
+            font-size: 0.8rem;
             max-width: 20%;
             color: white;
             padding: 1em;
@@ -87,16 +101,17 @@
 
         nav header {
             text-align: right;
+            margin-bottom: 1em;
         }
 
         nav header a {
-            text-decoration: none;
             background-color: white;
             border-radius: 50%;
             display: inline-block;
             line-height: 1em;
             color: darkblue;
-            padding: 0.25em
+            padding: 0.25em;
+            border: 0;
         }
 
         nav header a:hover {
@@ -121,15 +136,13 @@
 
         nav a {
             color: white;
+            text-decoration: none;
+            border-bottom: 1px dotted lightblue;
         }
 
         @media screen {
             body {
-                background: oldlace;
-                color: black;
-                width: 20cm;
                 padding: 2em;
-                font-size: 16px;
             }
         }
 
@@ -141,6 +154,11 @@
         }
 
         @media print {
+            :root {
+                --bg-color: darkslateblue;
+                --base-font-size: 11px;
+            }
+
             @page {
                 size: A4;
                 margin: 1.5cm;
@@ -156,6 +174,14 @@
                 @bottom-center {
                     content: '';
                 }
+            }
+
+            h1, h2, #edition, .author {
+                text-align: center;
+            }
+
+            h1 {
+                word-spacing: 100vw;
             }
 
             nav {
@@ -174,17 +200,12 @@
                 break-after: page;
             }
 
-            .block {
-                break-inside: avoid;
-            }
-
             h2 {
-                text-align: center;
                 margin: 0;
             }
 
-            .author {
-                text-align: center;
+            .block {
+                break-inside: avoid;
             }
         }
     </style>
@@ -249,7 +270,7 @@
 
                 element.innerHTML = `
                     <section class="cover">
-                        <h1>Awesome<br/>Guitar<br/>Songs</h1>
+                        <h1>Awesome Guitar Songs</h1>
                         <p id="edition">${formatEditions()}</p>
                     </section>
                     ${formatNavigation()}
