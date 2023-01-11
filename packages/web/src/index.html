@@ -97,6 +97,7 @@
         }
 
         nav header a {
+            text-decoration: none;
             background-color: white;
             color: darkblue;
             font-family: sans-serif;
@@ -130,10 +131,14 @@
             list-style: none;
         }
 
-        nav a {
+        nav li a {
             color: white;
             text-decoration: none;
             border-bottom: 1px dotted lightblue;
+        }
+
+        nav li a:hover {
+            border-bottom: 0;
         }
 
         /* Show distinguishable pages on print mode */
@@ -324,21 +329,32 @@
                     </ul>
                 `).join("");
 
-                const relativeUrl = (searchParam, value) => {
-                    return searchParam ? `?${searchParam}=${value}` : "/";
-                }
-
                 return `
                     <nav>
                         <header>
-                            ${state.transposedKey !== null ? `<a href="${relativeUrl()}" title="Show Original">O</a>` : ''}
-                            ${state.transposedKey !== 'G' ? `<a href="${relativeUrl("edition", "G")}" title="Show Easy Guitar Edition (G)">G</a>` : ''}
-                            ${state.transposedKey !== 'C' ? `<a href="${relativeUrl("edition", "C")}" title="Show Easy Ukulele Edition (C)">C</a>` : ''}
+                            ${formatEditionChoice("Original", null)}
+                            ${formatEditionChoice("Easy Guitar Edition (G)", "G")}
+                            ${formatEditionChoice("Easy Ukulele Edition (C)", "C")}
                             <a href="${relativeUrl("print", "true")}" target="_blank" title="Show print mode">🖶</a>
                         </header>
                         ${formattedBooks}
                     </nav>
                 `;
+            }
+
+            const relativeUrl = (searchParam, value) => {
+                return searchParam ? `?${searchParam}=${value}` : "/";
+            }
+
+            const formatEditionChoice = (editionName, editionKey) => {
+                if (state.transposedKey === editionKey) {
+                    return '';
+                }
+                const element = document.createElement("a");
+                element.text = editionKey ?? "O";
+                element.href = relativeUrl(editionKey ? "edition" : null, editionKey);
+                element.title = `Show ${editionName}`;
+                return element.outerHTML;
             }
 
             loadSongs();
