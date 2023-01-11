@@ -16,8 +16,12 @@
             box-sizing: border-box;
         }
 
-        html {
+        html, button {
             font-size: var(--base-font-size);
+        }
+
+        button {
+            cursor: pointer;
         }
 
         h1 {
@@ -96,7 +100,7 @@
             margin-bottom: 1em;
         }
 
-        nav header a {
+        nav header a, nav header button {
             text-decoration: none;
             background-color: white;
             color: darkblue;
@@ -111,7 +115,7 @@
             text-align: center;
         }
 
-        nav header a:hover {
+        nav header a:hover, nav header button:hover {
             filter: opacity(0.5);
         }
 
@@ -243,17 +247,29 @@
             };
 
             const loadSongs = () => {
+                getLocalSongsOrLoad()
+                    .then((books) => {
+                        state.books = books;
+                        window.localStorage.setItem("state", JSON.stringify(state));
+                        render();
+                    })
+                    .catch((e) => console.error(e));
+            }
+
+            const getLocalSongsOrLoad = async () => {
+                const rawLocalState = window.localStorage.getItem("state");
+                if (rawLocalState) {
+                    const localState = JSON.parse(rawLocalState);
+                    if (localState.transposedKey === state.transposedKey && localState.books) {
+                        return Promise.resolve(localState.books)
+                    }
+                }
                 const url = new URL("./songs", window.location.origin);
                 if (state.transposedKey) {
                     url.searchParams.append("edition", state.transposedKey)
                 }
-                fetch(url, {method: "GET"})
+                return fetch(url, {method: "GET"})
                     .then((res) => res.json())
-                    .then((books) => {
-                        state.books = books;
-                        render();
-                    })
-                    .catch((e) => console.error(e));
             }
 
             const render = async () => {
@@ -267,6 +283,11 @@
                     ${formatNavigation()}
                     ${formatBooks()}
                 `;
+
+                document.getElementById("refresh").addEventListener("click", () => {
+                    window.localStorage.clear();
+                    loadSongs();
+                });
 
                 if (state.printMode) {
                     const script = document.createElement("script");
@@ -336,6 +357,7 @@
                             ${formatEditionChoice("Easy Guitar Edition (G)", "G")}
                             ${formatEditionChoice("Easy Ukulele Edition (C)", "C")}
                             <a href="${relativeUrl("print", "true")}" target="_blank" title="Show print mode">🖶</a>
+                            <button id="refresh" title="Refresh">🗘</button>
                         </header>
                         ${formattedBooks}
                     </nav>
