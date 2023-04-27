@@ -68,8 +68,10 @@
 
         .block .title {
             font-size: 0.8rem;
-            width: 5rem;
-            margin-top: 0.2rem;
+            min-width: 2rem;
+            margin-right: 0.5rem;
+            margin-top: 0.1rem;
+            text-align: right;
         }
 
         .content > pre:first-child {
@@ -155,7 +157,7 @@
         @media print {
             :root {
                 --bg-color: darkslateblue;
-                --base-font-size: 11px;
+                --base-font-size: 14px;
             }
 
             @page {

@@ -40,8 +40,8 @@ const songify = (songDoc, key) => {
     const blockify = (blockDoc) => {
         const refrain = blockDoc.tag === '!Ref';
         const name = !refrain
-            ? blockDoc.tag?.slice(1) ?? `Verse ${verseCounter++}`
-            : 'Refrain';
+            ? blockDoc.tag?.slice(1) ?? `V${verseCounter++}`
+            : 'Ref';
         const lines = linify(blockDoc.value.trimEnd());
         return {
             refrain: refrain,
