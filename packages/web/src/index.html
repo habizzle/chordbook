@@ -84,6 +84,14 @@
             padding: 2em;
         }
 
+        .text-only .chord {
+            display: none;
+        }
+
+        .text-only pre.text {
+            white-space: normal;
+        }
+
         nav {
             position: fixed;
             background-color: var(--nav-bg-color);
@@ -243,6 +251,7 @@
             const url = new URL(window.location.href);
             const state = {
                 books: null,
+                textOnly: url.searchParams.get("textOnly") === "true",
                 printMode: url.searchParams.get("print") === "true",
                 transposedKey: url.searchParams.get("edition") || null,
                 anchor: url.hash.replace("#", '')
@@ -276,6 +285,10 @@
 
             const render = async () => {
                 const element = document.getElementsByTagName("body")[0];
+                
+                if(state.textOnly) {
+                  element.setAttribute("class", "text-only");
+                }
 
                 element.innerHTML = `
                     <section class="cover">
