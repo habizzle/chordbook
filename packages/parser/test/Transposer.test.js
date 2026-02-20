@@ -10,8 +10,9 @@ describe('transposeLine', () => {
     it('transposes simple progression from C to G', () => {
         const line = 'C  G  Am  F';
         const result = transposeLine(line, 'C', 'G');
-        expect(result).toContain('G');
-        expect(result).not.toContain('C');
+        // normalize whitespace for stable comparison
+        const normalized = result.replace(/\s+/g, ' ').trim();
+        expect(normalized).toBe('G D Em C');
     });
 
     it('throws on unsupported key', () => {
