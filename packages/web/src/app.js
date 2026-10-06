@@ -105,11 +105,9 @@ const init = () => {
         wireScrollSpy();
 
         if (state.printMode) {
-            const script = document.createElement("script");
-            script.src = "https://unpkg.com/pagedjs@0.4.3/dist/paged.polyfill.js";
-            script.integrity = "sha384-JkjBt3FPbcQ3WBc3qp+maUIw8YLoZxNNj8H+tn73mljkC1ba8aEPWlgwfCRPpAxV";
-            script.crossOrigin = "anonymous";
-            document.head.appendChild(script)
+            import("/pagedjs.js")
+                .then(({Previewer}) => new Previewer().preview())
+                .catch((e) => console.error("Pagination failed", e));
         }
 
         if (state.anchor) {

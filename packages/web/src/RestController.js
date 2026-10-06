@@ -6,6 +6,7 @@ import {parse} from '@chordbook/parser';
 const htmlPath = path.resolve(import.meta.dirname, "./index.html");
 const appJsPath = path.resolve(import.meta.dirname, "./app.js");
 const appCssPath = path.resolve(import.meta.dirname, "./app.css");
+const pagedJsPath = path.resolve(import.meta.dirname, "../../../node_modules/pagedjs/dist/paged.esm.js");
 const booksPath = process.env.BOOKS_PATH ?? path.resolve(import.meta.dirname, "../../../books");
 
 const supportedEditions = ['C', 'G'];
@@ -13,7 +14,7 @@ const supportedEditions = ['C', 'G'];
 const securityHeaders = {
     'Content-Security-Policy': [
         "default-src 'self'",
-        "script-src 'self' https://unpkg.com",
+        "script-src 'self'",
         "style-src 'self' 'unsafe-inline'",
         "img-src 'self' data:",
         "connect-src 'self'",
@@ -70,6 +71,7 @@ const routes = {
     "GET /": staticFile(htmlPath, 'text/html; charset=utf-8'),
     "GET /app.js": staticFile(appJsPath, 'text/javascript; charset=utf-8'),
     "GET /app.css": staticFile(appCssPath, 'text/css; charset=utf-8'),
+    "GET /pagedjs.js": staticFile(pagedJsPath, 'text/javascript; charset=utf-8'),
     "GET /songs": songs,
 };
 

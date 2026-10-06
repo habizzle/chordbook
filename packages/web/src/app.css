@@ -325,8 +325,14 @@ nav :focus-visible {
         .toc-leader {
             flex: 1;
             min-width: 2em;
+            height: 0.55em;
             margin: 0 0.4em;
-            border-bottom: 1px dotted #999;
+            background-image: radial-gradient(circle, #999 0.05em, transparent 0.08em);
+            background-size: 0.28em 0.28em;
+            background-repeat: repeat-x;
+            background-position: 0 center;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
         }
 
         .toc-list a::after {

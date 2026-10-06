@@ -7,7 +7,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@chordbook/parser": "*"
+    "@chordbook/parser": "*",
+    "pagedjs": "^0.4.3"
   },
   "devDependencies": {
     "vitest": "^5.0.3"
