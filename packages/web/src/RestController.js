@@ -1,53 +1,103 @@
 import fs from 'fs';
 import http from 'http';
 import path from 'path';
-import url from 'url';
 import {parse} from '@chordbook/parser';
 
-const __filename = url.fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const htmlPath = path.resolve(__dirname, "./index.html");
-const booksPath = process.env.BOOKS_PATH ?? path.resolve(__dirname, "../../../books");
-const port = process.env.PORT ?? 8080;
+const htmlPath = path.resolve(import.meta.dirname, "./index.html");
+const appJsPath = path.resolve(import.meta.dirname, "./app.js");
+const appCssPath = path.resolve(import.meta.dirname, "./app.css");
+const booksPath = process.env.BOOKS_PATH ?? path.resolve(import.meta.dirname, "../../../books");
 
-const home = (req, res) => {
-    const html = fs.readFileSync(htmlPath, "utf8");
+const supportedEditions = ['C', 'G'];
 
-    res.writeHead(200, {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Content-Length': html.length,
-        'Expires': new Date().toUTCString()
+const securityHeaders = {
+    'Content-Security-Policy': [
+        "default-src 'self'",
+        "script-src 'self' https://unpkg.com",
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data:",
+        "connect-src 'self'",
+        "frame-ancestors 'none'",
+        "base-uri 'none'",
+        "form-action 'none'",
+    ].join('; '),
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'no-referrer',
+    'Cache-Control': 'no-store',
+};
+
+const sendError = (res, status, message) => {
+    res.writeHead(status, {
+        ...securityHeaders,
+        'Content-Type': 'text/plain; charset=utf-8',
     });
-    res.end(html);
-}
+    res.end(message);
+};
+
+const sendJson = (res, body, status = 200) => {
+    res.writeHead(status, {
+        ...securityHeaders,
+        'Content-Type': 'application/json; charset=utf-8',
+        'Content-Length': Buffer.byteLength(body),
+    });
+    res.end(body);
+};
+
+const staticFile = (filePath, contentType) => (req, res) => {
+    const body = fs.readFileSync(filePath);
+    res.writeHead(200, {
+        ...securityHeaders,
+        'Content-Type': contentType,
+        'Content-Length': body.length,
+    });
+    res.end(body);
+};
 
 const songs = (req, res) => {
-    const queryObject = url.parse(req.url, true).query;
-    const transposedKey = queryObject['edition'] || null;
-    const songs = parse(booksPath, transposedKey);
+    const {searchParams} = new URL(req.url, 'http://localhost');
+    const edition = searchParams.get('edition');
 
-    res.writeHead(200, {
-        'Content-Type': 'application/json; charset=utf-8',
-    });
-    res.end(JSON.stringify(songs));
-}
+    if (edition !== null && !supportedEditions.includes(edition)) {
+        sendError(res, 400, `Unsupported edition. Supported editions: ${supportedEditions.join(', ')}`);
+        return;
+    }
+
+    const body = JSON.stringify(parse(booksPath, edition));
+    sendJson(res, body);
+};
 
 const routes = {
-    "GET /": home,
+    "GET /": staticFile(htmlPath, 'text/html; charset=utf-8'),
+    "GET /app.js": staticFile(appJsPath, 'text/javascript; charset=utf-8'),
+    "GET /app.css": staticFile(appCssPath, 'text/css; charset=utf-8'),
     "GET /songs": songs,
 };
 
-export const start = () => {
-    http.createServer(function (req, res) {
-        const path = url.parse(req.url).pathname;
-        const callback = routes[`${req.method} ${path}`];
-        if (callback) {
-            callback(req, res);
-        } else {
-            res.writeHead(404)
-                .end();
+export const start = ({port = process.env.PORT ?? 8080, host = process.env.HOST ?? '127.0.0.1'} = {}) => {
+    const server = http.createServer((req, res) => {
+        try {
+            const {pathname} = new URL(req.url, 'http://localhost');
+            const callback = routes[`${req.method} ${pathname}`];
+            if (callback) {
+                callback(req, res);
+            } else {
+                sendError(res, 404, 'Not Found');
+            }
+        } catch (error) {
+            console.error('Request failed:', error);
+            if (!res.headersSent) {
+                sendError(res, 500, 'Internal Server Error');
+            } else {
+                res.end();
+            }
         }
-    }).listen(port);
+    });
 
-    console.log(`Show songs at http://localhost:${port}/`);
+    server.on('error', (error) => {
+        console.error(`Server error: ${error.message}`);
+    });
+
+    return server.listen(port, host, () => {
+        console.log(`Show songs at http://localhost:${server.address().port}/`);
+    });
 };
