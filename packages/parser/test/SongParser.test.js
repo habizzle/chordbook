@@ -33,4 +33,57 @@ key: C
         expect(books[0].songs[0].title).toBe('Test Song');
         expect(books[0].songs[0].blocks[0].lines[0].type).toBe('chord');
     });
+
+    describe('with unsupported keys and malformed songs', () => {
+        let mixedDir;
+
+        beforeAll(() => {
+            mixedDir = path.resolve(__dirname, 'fixtures-mixed');
+            fs.mkdirSync(mixedDir, {recursive: true});
+            const yaml = `---
+title: Fine Song
+key: C
+song:
+  - |
+    C        G
+    All is fine here
+---
+title: Odd Key Song
+key: Am
+song:
+  - |
+    Am       Em
+    My key is unsupported
+---
+title: Transposed Fine
+key: G
+song:
+  - |
+    G        D
+    G edition works for me
+---
+title: Broken Song
+author: nobody
+`;
+            fs.writeFileSync(path.join(mixedDir, 'mixed.yml'), yaml, 'utf8');
+        });
+
+        afterAll(() => {
+            fs.rmSync(mixedDir, {recursive: true, force: true});
+        });
+
+        it('keeps untransposable songs untransposed and skips malformed ones', () => {
+            const books = parse(mixedDir, 'G');
+            const songs = books[0].songs;
+            expect(songs.map((song) => song.title)).toEqual(['Fine Song', 'Odd Key Song', 'Transposed Fine']);
+            expect(songs[0].blocks[0].lines[0].content).toContain('G        D');
+            expect(songs[1].blocks[0].lines[0].content).toContain('Am       Em');
+            expect(songs[2].blocks[0].lines[0].content).toContain('G        D');
+        });
+
+        it('returns all songs without a key', () => {
+            const books = parse(mixedDir, null);
+            expect(books[0].songs).toHaveLength(3);
+        });
+    });
 });

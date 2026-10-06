@@ -3,8 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import {transposeLine} from "./Transposer.js";
 
-export const parse = (path, key) => {
-    return findYamlSongDocs(path)
+export const parse = (directory, key) => {
+    return findYamlSongDocs(directory)
         .map((filePath) => bookify(filePath, key));
 };
 
@@ -16,11 +16,26 @@ const findYamlSongDocs = (directory) => {
         .map((it) => path.join(directory, it));
 }
 
-const bookify = (filePath, key) => ({
-    id: path.basename(filePath),
-    title: formatTitle(filePath),
-    songs: parseYamlSongDocs(filePath).map((songDoc) => songify(songDoc, key))
-});
+const bookify = (filePath, key) => {
+    const songs = [];
+    for (const songDoc of parseYamlSongDocs(filePath)) {
+        try {
+            songs.push(songify(songDoc, key));
+        } catch (error) {
+            console.warn(`Could not transpose a song in ${filePath} (${error.message}), keeping it untransposed`);
+            try {
+                songs.push(songify(songDoc, null));
+            } catch (fallbackError) {
+                console.warn(`Skipping malformed song in ${filePath}: ${fallbackError.message}`);
+            }
+        }
+    }
+    return {
+        id: path.basename(filePath),
+        title: formatTitle(filePath),
+        songs: songs
+    };
+};
 
 const formatTitle = (filePath) => path.basename(filePath)
     .replace(/(.private)?.yml$/, '')
@@ -32,6 +47,8 @@ const parseYamlSongDocs = (filePath) => {
     console.log(`Finished parsing ${docs.length} songs from ${filePath}`);
     return docs;
 }
+
+const isChordLine = (line) => line.indexOf('  ') >= 0 || line.indexOf(' ') < 0;
 
 const songify = (songDoc, key) => {
     let verseCounter = 1;
@@ -51,12 +68,9 @@ const songify = (songDoc, key) => {
     };
 
     const linify = (block) => block.split("\n").map(line => {
-        const chord = line.indexOf("  ") >= 0 // either chords are separated by more than 1 whitespace
-            || line.indexOf(" ") < 0; // or line contains just 1 chord - it is assumed a line never contains of just one word
-        if (chord) {
-            if (key) {
-                line = transposeLine(line, docObj.key, key);
-            }
+        const chord = isChordLine(line);
+        if (chord && key) {
+            line = transposeLine(line, docObj.key, key);
         }
         return {
             type: chord ? 'chord' : 'text',

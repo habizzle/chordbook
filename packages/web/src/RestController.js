@@ -6,8 +6,11 @@ import {parse} from '@chordbook/parser';
 const htmlPath = path.resolve(import.meta.dirname, "./index.html");
 const appJsPath = path.resolve(import.meta.dirname, "./app.js");
 const appCssPath = path.resolve(import.meta.dirname, "./app.css");
+const htmlJsPath = path.resolve(import.meta.dirname, "./html.js");
+const templatesJsPath = path.resolve(import.meta.dirname, "./templates.js");
+const stateJsPath = path.resolve(import.meta.dirname, "./state.js");
+const apiJsPath = path.resolve(import.meta.dirname, "./api.js");
 const pagedJsPath = path.resolve(import.meta.dirname, "../../../node_modules/pagedjs/dist/paged.esm.js");
-const booksPath = process.env.BOOKS_PATH ?? path.resolve(import.meta.dirname, "../../../books");
 
 const supportedEditions = ['C', 'G'];
 
@@ -54,7 +57,7 @@ const staticFile = (filePath, contentType) => (req, res) => {
     res.end(body);
 };
 
-const songs = (req, res) => {
+const songsHandler = (booksPath) => (req, res) => {
     const {searchParams} = new URL(req.url, 'http://localhost');
     const edition = searchParams.get('edition');
 
@@ -67,15 +70,23 @@ const songs = (req, res) => {
     sendJson(res, body);
 };
 
-const routes = {
-    "GET /": staticFile(htmlPath, 'text/html; charset=utf-8'),
-    "GET /app.js": staticFile(appJsPath, 'text/javascript; charset=utf-8'),
-    "GET /app.css": staticFile(appCssPath, 'text/css; charset=utf-8'),
-    "GET /pagedjs.js": staticFile(pagedJsPath, 'text/javascript; charset=utf-8'),
-    "GET /songs": songs,
-};
+export const start = ({
+    port = process.env.PORT ?? 8080,
+    host = process.env.HOST ?? '127.0.0.1',
+    booksPath = process.env.BOOKS_PATH ?? path.resolve(import.meta.dirname, "../../../books"),
+} = {}) => {
+    const routes = {
+        "GET /": staticFile(htmlPath, 'text/html; charset=utf-8'),
+        "GET /app.js": staticFile(appJsPath, 'text/javascript; charset=utf-8'),
+        "GET /app.css": staticFile(appCssPath, 'text/css; charset=utf-8'),
+        "GET /html.js": staticFile(htmlJsPath, 'text/javascript; charset=utf-8'),
+        "GET /templates.js": staticFile(templatesJsPath, 'text/javascript; charset=utf-8'),
+        "GET /state.js": staticFile(stateJsPath, 'text/javascript; charset=utf-8'),
+        "GET /api.js": staticFile(apiJsPath, 'text/javascript; charset=utf-8'),
+        "GET /pagedjs.js": staticFile(pagedJsPath, 'text/javascript; charset=utf-8'),
+        "GET /songs": songsHandler(booksPath),
+    };
 
-export const start = ({port = process.env.PORT ?? 8080, host = process.env.HOST ?? '127.0.0.1'} = {}) => {
     const server = http.createServer((req, res) => {
         try {
             const {pathname} = new URL(req.url, 'http://localhost');

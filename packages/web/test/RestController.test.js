@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import {parse} from '@chordbook/parser';
 import {start} from '../src/RestController.js';
-import {esc} from '../src/app.js';
+import {esc} from '../src/html.js';
 
 describe('web integration', () => {
     it('reads songs from books path', () => {
@@ -80,6 +80,62 @@ describe('RestController', () => {
     it('returns 404 for unknown routes', async () => {
         const res = await fetch(`${baseUrl}/nope`);
         expect(res.status).toBe(404);
+    });
+});
+
+describe('RestController with broken book data', () => {
+    let server;
+    let baseUrl;
+    let fixtureDir;
+
+    beforeAll(async () => {
+        fixtureDir = path.resolve(import.meta.dirname, 'fixtures-broken');
+        fs.mkdirSync(fixtureDir, {recursive: true});
+        const yaml = `---
+title: Fine Song
+key: C
+song:
+  - |
+    C        G
+    All is fine here
+---
+title: Odd Key Song
+key: Am
+song:
+  - |
+    Am       Em
+    My key is unsupported
+---
+title: Broken Song
+author: nobody
+`;
+        fs.writeFileSync(path.join(fixtureDir, 'broken.yml'), yaml, 'utf8');
+
+        server = start({port: 0, booksPath: fixtureDir});
+        await new Promise((resolve) => server.on('listening', resolve));
+        baseUrl = `http://127.0.0.1:${server.address().port}`;
+    });
+
+    afterAll(async () => {
+        await new Promise((resolve) => server.close(resolve));
+        fs.rmSync(fixtureDir, {recursive: true, force: true});
+    });
+
+    it('serves editions with 200 despite untransposable songs', async () => {
+        for (const edition of ['', '?edition=G', '?edition=C']) {
+            const res = await fetch(`${baseUrl}/songs${edition}`);
+            expect(res.status).toBe(200);
+            const books = await res.json();
+            expect(books[0].songs.map((song) => song.title)).toEqual(['Fine Song', 'Odd Key Song']);
+        }
+    });
+
+    it('keeps untransposable songs untransposed while transposing the rest', async () => {
+        const books = await (await fetch(`${baseUrl}/songs?edition=G`)).json();
+        const fine = books[0].songs[0].blocks[0].lines[0].content;
+        const odd = books[0].songs[1].blocks[0].lines[0].content;
+        expect(fine).toContain('G        D');
+        expect(odd).toContain('Am       Em');
     });
 });
 

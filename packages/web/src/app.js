@@ -1,226 +1,102 @@
-export const esc = (value) => String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
+import {html} from './html.js';
+import {formatBooks, formatEditions, formatNavigation, formatToc} from './templates.js';
+import {clearStorage, loadPrefs, savePrefs} from './state.js';
+import {getSongs} from './api.js';
 
 const init = () => {
-    document.addEventListener('keydown', (e) => {
-        function isElementInViewport(el) {
-            const rect = el.getBoundingClientRect();
-            const elementHeight = el.offsetHeight;
-            const elementWidth = el.offsetWidth;
-            return rect.top >= -elementHeight
-                && rect.left >= -elementWidth
-                && rect.right <= (window.innerWidth || document.documentElement.clientWidth) + elementWidth
-                && rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) + elementWidth;
-        }
-
-        const selector = '.song';
-
-        if (e.key === 'ArrowLeft') {
-            const all = [...document.querySelectorAll(selector)];
-            const current = all.find((el) => isElementInViewport(el));
-            const previousIndex = all.indexOf(current) - 1;
-            if (previousIndex >= 0) {
-                all[previousIndex].scrollIntoView();
-            }
-        }
-
-        if (e.key === 'ArrowRight') {
-            const all = [...document.querySelectorAll(selector)];
-            const current = all.find((el) => isElementInViewport(el));
-            const nextIndex = all.indexOf(current) + 1;
-            if (nextIndex < all.length) {
-                all[nextIndex].scrollIntoView();
-            }
-        }
-    });
-
     const pageUrl = new URL(window.location.href);
     const state = {
         books: null,
-        textOnly: pageUrl.searchParams.get("textOnly") === "true",
-        printMode: pageUrl.searchParams.get("print") === "true",
-        transposedKey: pageUrl.searchParams.get("edition") || null,
-        anchor: pageUrl.hash.replace("#", '')
+        textOnly: pageUrl.searchParams.get('textOnly') === 'true',
+        printMode: pageUrl.searchParams.get('print') === 'true',
+        transposedKey: pageUrl.searchParams.get('edition') || null,
+        anchor: pageUrl.hash.replace('#', ''),
+        sort: loadPrefs().sort,
     };
 
+    const persist = () => savePrefs({sort: state.sort});
+
     const loadSongs = () => {
-        getLocalSongsOrLoad()
+        getSongs(state.transposedKey)
             .then((books) => {
                 state.books = books;
-                window.localStorage.setItem("state", JSON.stringify(state));
                 render();
             })
-            .catch((e) => console.error(e));
-    }
+            .catch((e) => {
+                console.error(e);
+                document.getElementsByTagName('body')[0].innerHTML = html`
+                    <p class="load-error">Could not load songs. <button id="retry" type="button">Retry</button></p>
+                `;
+                document.getElementById('retry').addEventListener('click', () => loadSongs());
+            });
+    };
 
-    const getLocalSongsOrLoad = async () => {
-        let localState = null;
-        try {
-            const rawLocalState = window.localStorage.getItem("state");
-            if (rawLocalState) {
-                localState = JSON.parse(rawLocalState);
-            }
-        } catch (error) {
-            console.warn("Discarding corrupted local state", error);
-            window.localStorage.removeItem("state");
-        }
-        if (Array.isArray(localState?.books) && localState.transposedKey === state.transposedKey) {
-            return localState.books;
-        }
-        const songsUrl = new URL("./songs", window.location.origin);
-        if (state.transposedKey) {
-            songsUrl.searchParams.append("edition", state.transposedKey)
-        }
-        return fetch(songsUrl, {method: "GET"})
-            .then((res) => res.json())
-    }
+    const render = () => {
+        const element = document.getElementsByTagName('body')[0];
+        const query = document.getElementById('nav-search')?.value ?? '';
+        const scrollY = window.scrollY;
 
-    const render = async () => {
-        const element = document.getElementsByTagName("body")[0];
-
-        if(state.textOnly) {
-          element.setAttribute("class", "text-only");
+        if (state.textOnly) {
+            element.setAttribute('class', 'text-only');
         }
 
-        element.innerHTML = `
+        element.innerHTML = html`
             <section class="cover">
                 <h1>Awesome Guitar Songs</h1>
-                <p id="edition">${formatEditions()}</p>
+                <p id="edition">${formatEditions(state.transposedKey)}</p>
             </section>
-            ${formatToc()}
-            ${formatNavigation()}
-            ${formatBooks()}
+            ${state.printMode && formatToc(state.books, state.sort)}
+            ${!state.printMode && formatNavigation(state.books, state)}
+            ${formatBooks(state.books, state.sort)}
         `;
 
-        document.getElementById("refresh")?.addEventListener("click", () => {
-            window.localStorage.clear();
-            loadSongs();
-        });
+        wireNav();
 
-        wireSearch();
-        wireScrollSpy();
-
-        if (state.printMode) {
-            import("/pagedjs.js")
-                .then(({Previewer}) => new Previewer().preview())
-                .catch((e) => console.error("Pagination failed", e));
+        if (query) {
+            const search = document.getElementById('nav-search');
+            search.value = query;
+            search.dispatchEvent(new Event('input'));
         }
 
         if (state.anchor) {
             document.getElementById(state.anchor)?.scrollIntoView();
+            state.anchor = null;
+        } else if (!state.printMode) {
+            window.scrollTo({top: scrollY, behavior: 'instant'});
         }
-    }
 
-    const formatBooks = () => state.books.map(formatBook).join('');
-
-    const formatBook = (book, bookIndex) => book.songs
-        .map((song, songIndex) => formatSong(bookIndex, song, songIndex))
-        .join('');
-
-    const formatSong = (bookIndex, song, songIndex) => `
-        <section class="song" id="song-${bookIndex}-${songIndex}">
-            <h2 class="song-title">${esc(song.title)}</h2>
-            <p class="author">${esc(song.author ?? '')}</p>
-            ${song.blocks.map(block => formatBlock(block)).join('')}
-        </section>
-    `;
-
-    const formatBlock = (block) => `
-        <div class="block">
-            <div class="title">
-                ${esc(block.name)}:
-            </div>
-            <div class="content">
-                ${block.lines.map(line => formatLine(line)).join('')}
-            </div>
-        </div>
-    `;
-
-    const formatLine = (line) => `<pre class="${esc(line.type)}">${esc(line.content)}</pre>`;
-
-    const formatToc = () => {
-        if (!state.printMode) {
-            return '';
-        }
-        const multiBook = state.books.length > 1;
-        const entries = state.books.map((book, bookIndex) => `
-            ${multiBook ? `<p class="toc-book">${esc(book.title)}</p>` : ''}
-            <ul class="toc-list">
-                ${book.songs.map((song, songIndex) => `
-                    <li><a href="#song-${bookIndex}-${songIndex}">
-                        <span class="toc-title">${esc(song.title)}</span>
-                        <span class="toc-leader"></span>
-                    </a></li>
-                `).join('')}
-            </ul>
-        `).join('');
-        return `
-            <section class="toc">
-                <h2>Table of Contents</h2>
-                ${entries}
-            </section>
-        `;
-    };
-
-    const formatEditions = () => [
-        formatEdition("Original", null),
-        formatEdition("Easy Ukulele Edition (C)", "C"),
-        formatEdition("Easy Guitar Edition (G)", "G"),
-    ].join('');
-
-    const formatEdition = (editionName, editionKey) => {
-        const current = editionKey === state.transposedKey;
-        return current ? esc(editionName) : '';
-    };
-
-    const formatNavigation = function () {
         if (state.printMode) {
-            return '';
+            import('/pagedjs.js')
+                .then(({Previewer}) => new Previewer().preview())
+                .catch((e) => console.error('Pagination failed', e));
         }
+    };
 
-        const formattedBooks = state.books.map((book, bookIndex) => `
-            <div class="nav-book">
-                ${state.books.length > 1 ? `<p class="nav-book-title">${esc(book.title)}</p>` : ''}
-                <ul>
-                    ${book.songs.map((song, songIndex) => `<li><a href="#song-${bookIndex}-${songIndex}">${esc(song.title)}</a></li>`).join("")}
-                </ul>
-            </div>
-        `).join("");
+    const wireNav = () => {
+        document.getElementById('refresh')?.addEventListener('click', () => {
+            clearStorage();
+            state.sort = 'natural';
+            persist();
+            loadSongs();
+        });
 
-        return `
-            <nav>
-                <header>
-                    <div class="nav-actions">
-                        ${formatEditionChoice("Original", null, "🎵")}
-                        ${formatEditionChoice("Easy Guitar Edition (G)", "G", "🎸")}
-                        ${formatEditionChoice("Easy Ukulele Edition (C)", "C", "🪕")}
-                        <a href="${relativeUrl("print", "true")}" target="_blank" title="Show print mode">🖨️</a>
-                        <button id="refresh" type="button" title="Refresh">🔄</button>
-                    </div>
-                    <input id="nav-search" type="search" placeholder="Search songs…" autocomplete="off" aria-label="Search songs"/>
-                </header>
-                <div class="nav-content">${formattedBooks}</div>
-                <p id="nav-empty" hidden>No songs match your search.</p>
-            </nav>
-        `;
-    }
+        wireSearch();
+        wireSort();
+        wireScrollSpy();
+    };
 
     const wireSearch = () => {
-        const search = document.getElementById("nav-search");
-        const empty = document.getElementById("nav-empty");
+        const search = document.getElementById('nav-search');
+        const empty = document.getElementById('nav-empty');
         if (!search || !empty) {
             return;
         }
-        search.addEventListener("input", () => {
+        search.addEventListener('input', () => {
             const query = search.value.trim().toLowerCase();
             let matches = 0;
-            document.querySelectorAll(".nav-book").forEach((book) => {
+            document.querySelectorAll('.nav-book').forEach((book) => {
                 let bookMatches = 0;
-                book.querySelectorAll("li").forEach((li) => {
+                book.querySelectorAll('li').forEach((li) => {
                     const match = !query || li.textContent.toLowerCase().includes(query);
                     li.hidden = !match;
                     if (match) {
@@ -232,26 +108,53 @@ const init = () => {
             });
             empty.hidden = matches > 0;
         });
-        search.addEventListener("keydown", (e) => {
-            if (e.key === "Escape") {
-                search.value = "";
-                search.dispatchEvent(new Event("input"));
+        search.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                search.value = '';
+                search.dispatchEvent(new Event('input'));
             }
         });
-    }
+    };
 
+    const wireSort = () => {
+        const wrapper = document.getElementById('nav-sort');
+        if (!wrapper) {
+            return;
+        }
+        wrapper.addEventListener('click', (e) => {
+            const trigger = e.target.closest('.nav-sort > button');
+            if (trigger) {
+                e.stopPropagation();
+                wrapper.classList.toggle('open');
+                return;
+            }
+            const item = e.target.closest('[data-sort]');
+            if (!item || item.dataset.sort === state.sort) {
+                return;
+            }
+            state.sort = item.dataset.sort;
+            persist();
+            render();
+        });
+        wrapper.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.activeElement?.blur();
+            }
+        });
+    };
+
+    let detachScrollSpy = null;
     const wireScrollSpy = () => {
         const links = new Map();
         document.querySelectorAll("nav li a[href^='#song-']").forEach((link) => {
-            links.set(link.getAttribute("href").slice(1), link);
+            links.set(link.getAttribute('href').slice(1), link);
         });
         if (links.size === 0) {
             return;
         }
-        const container = document.querySelector(".nav-content");
-        const sections = [...links.keys()]
-            .map((id) => document.getElementById(id))
-            .filter(Boolean);
+        const container = document.querySelector('.nav-content');
+        const sections = [...document.querySelectorAll('.song')]
+            .filter((section) => links.has(section.id));
         const reveal = (link) => {
             if (!container || !link.getClientRects().length) {
                 return;
@@ -278,35 +181,52 @@ const init = () => {
             }
             links.forEach((link, id) => {
                 const isCurrent = id === currentId;
-                link.classList.toggle("current", isCurrent);
+                link.classList.toggle('current', isCurrent);
                 if (isCurrent) {
                     reveal(link);
                 }
             });
         };
-        window.addEventListener("scroll", () => {
+        const onScroll = () => {
             if (!ticking) {
                 ticking = true;
                 requestAnimationFrame(update);
             }
-        }, {passive: true});
+        };
+        window.addEventListener('scroll', onScroll, {passive: true});
+        detachScrollSpy?.();
+        detachScrollSpy = () => window.removeEventListener('scroll', onScroll);
         update();
-    }
+    };
 
-    const relativeUrl = (searchParam, value) => {
-        return searchParam ? `?${searchParam}=${value}` : "/";
-    }
+    document.addEventListener('keydown', (e) => {
+        const isElementInViewport = (el) => {
+            const rect = el.getBoundingClientRect();
+            return rect.top >= -el.offsetHeight
+                && rect.left >= -el.offsetWidth
+                && rect.right <= (window.innerWidth || document.documentElement.clientWidth) + el.offsetWidth
+                && rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) + el.offsetWidth;
+        };
 
-    const formatEditionChoice = (editionName, editionKey, label) => {
-        if (state.transposedKey === editionKey) {
-            return '';
+        const all = [...document.querySelectorAll('.song')];
+        const current = all.find((el) => isElementInViewport(el));
+        const currentIndex = all.indexOf(current);
+
+        if (e.key === 'ArrowLeft' && currentIndex - 1 >= 0) {
+            all[currentIndex - 1].scrollIntoView();
         }
-        const element = document.createElement("a");
-        element.text = label ?? editionKey ?? "O";
-        element.href = relativeUrl(editionKey ? "edition" : null, editionKey);
-        element.title = `Show ${editionName}`;
-        return element.outerHTML;
-    }
+
+        if (e.key === 'ArrowRight' && currentIndex + 1 < all.length) {
+            all[currentIndex + 1].scrollIntoView();
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        const wrapper = document.getElementById('nav-sort');
+        if (wrapper && !wrapper.contains(e.target)) {
+            wrapper.classList.remove('open');
+        }
+    });
 
     loadSongs();
 };
