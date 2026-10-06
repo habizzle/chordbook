@@ -91,6 +91,7 @@ const init = () => {
                 <h1>Awesome Guitar Songs</h1>
                 <p id="edition">${formatEditions()}</p>
             </section>
+            ${formatToc()}
             ${formatNavigation()}
             ${formatBooks()}
         `;
@@ -142,6 +143,30 @@ const init = () => {
     `;
 
     const formatLine = (line) => `<pre class="${esc(line.type)}">${esc(line.content)}</pre>`;
+
+    const formatToc = () => {
+        if (!state.printMode) {
+            return '';
+        }
+        const multiBook = state.books.length > 1;
+        const entries = state.books.map((book, bookIndex) => `
+            ${multiBook ? `<p class="toc-book">${esc(book.title)}</p>` : ''}
+            <ul class="toc-list">
+                ${book.songs.map((song, songIndex) => `
+                    <li><a href="#song-${bookIndex}-${songIndex}">
+                        <span class="toc-title">${esc(song.title)}</span>
+                        <span class="toc-leader"></span>
+                    </a></li>
+                `).join('')}
+            </ul>
+        `).join('');
+        return `
+            <section class="toc">
+                <h2>Table of Contents</h2>
+                ${entries}
+            </section>
+        `;
+    };
 
     const formatEditions = () => [
         formatEdition("Original", null),

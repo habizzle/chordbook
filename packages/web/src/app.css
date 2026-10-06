@@ -292,7 +292,48 @@ nav :focus-visible {
         margin: 0;
     }
 
-    .block {
-        break-inside: avoid;
-    }
+        .toc h2 {
+            margin: 0 0 1.5em;
+        }
+
+        .toc-book {
+            margin: 1.2em 0 0.4em;
+            font-size: 0.9rem;
+            font-weight: bold;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #444;
+        }
+
+        .toc-list {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .toc-list li {
+            margin: 0.25em 0;
+        }
+
+        .toc-list a {
+            display: flex;
+            align-items: baseline;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .toc-leader {
+            flex: 1;
+            min-width: 2em;
+            margin: 0 0.4em;
+            border-bottom: 1px dotted #999;
+        }
+
+        .toc-list a::after {
+            content: target-counter(attr(href), page);
+        }
+
+        .block {
+            break-inside: avoid;
+        }
 }
