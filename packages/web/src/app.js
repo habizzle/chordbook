@@ -225,9 +225,24 @@ const init = () => {
         if (links.size === 0) {
             return;
         }
+        const container = document.querySelector(".nav-content");
         const sections = [...links.keys()]
             .map((id) => document.getElementById(id))
             .filter(Boolean);
+        const reveal = (link) => {
+            if (!container || !link.getClientRects().length) {
+                return;
+            }
+            const containerRect = container.getBoundingClientRect();
+            const linkRect = link.getBoundingClientRect();
+            const overshootTop = linkRect.top - containerRect.top;
+            const overshootBottom = linkRect.bottom - containerRect.bottom;
+            if (overshootTop < 0) {
+                container.scrollTop += overshootTop;
+            } else if (overshootBottom > 0) {
+                container.scrollTop += overshootBottom;
+            }
+        };
         let ticking = false;
         const update = () => {
             ticking = false;
@@ -238,7 +253,13 @@ const init = () => {
                     currentId = section.id;
                 }
             }
-            links.forEach((link, id) => link.classList.toggle("current", id === currentId));
+            links.forEach((link, id) => {
+                const isCurrent = id === currentId;
+                link.classList.toggle("current", isCurrent);
+                if (isCurrent) {
+                    reveal(link);
+                }
+            });
         };
         window.addEventListener("scroll", () => {
             if (!ticking) {
