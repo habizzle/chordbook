@@ -29,6 +29,7 @@ export const transposeLine = (line, oldKey, newKey) => {
 const transpositions = [
     ["C", "G"],
     ["Cadd9", "Gadd9"],
+    ["C/B", "G/B"],
     ["A", "E"],
     ["Am", "Em"],
     ["F", "C"],
